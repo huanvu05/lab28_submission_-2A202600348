@@ -15,16 +15,20 @@ services:
     depends_on: [zookeeper]
     ports:
       - "9092:9092"
+      - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
   # ── Prefect ───────────────────────────────────────────────
   prefect-orion:
     image: prefecthq/prefect:2.14.0-python3.10
-    command: prefect orion start --host 0.0.0.0
+    command: prefect server start --host 0.0.0.0
     ports:
       - "4200:4200"
     volumes:
@@ -40,6 +44,7 @@ services:
       - ./delta-lake:/opt/delta-lake
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on: [prefect-orion, kafka]
+    restart: unless-stopped
 
   # ── Vector Store (Qdrant) ─────────────────────────────────
   qdrant:
